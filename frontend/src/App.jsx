@@ -14,16 +14,16 @@ function App() {
     setIsTransitioning(true);
     setTimeout(() => {
       setIsExpanded(true);
-      setTimeout(() => setIsTransitioning(false), 50);
-    }, 300);
+      setTimeout(() => setIsTransitioning(false), 200);
+    }, 500);
   };
 
   const handleCollapse = () => {
     setIsTransitioning(true);
     setTimeout(() => {
       setIsExpanded(false);
-      setTimeout(() => setIsTransitioning(false), 50);
-    }, 300);
+      setTimeout(() => setIsTransitioning(false), 200);
+    }, 500);
   };
 
   return (
@@ -59,7 +59,13 @@ function App() {
         <div
           className={`w-full transition-all duration-700 ${isExpanded ? "max-w-none" : "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"}`}
         >
-          {!isExpanded && <Hero />}
+          <div
+            className={`transition-opacity duration-700 ${
+              isExpanded || isTransitioning ? "opacity-0" : "opacity-100"
+            }`}
+          >
+            {!isExpanded && <Hero />}
+          </div>
 
           {/* Right Side - 3D Apartment Preview */}
           <div
@@ -73,7 +79,7 @@ function App() {
               } ${isTransitioning ? "opacity-0" : "opacity-100"}`}
               style={{
                 transition:
-                  "opacity 0.3s ease-in-out, width 0.7s ease-out, height 0.7s ease-out, border-color 0.3s ease-out, box-shadow 0.3s ease-out",
+                  "opacity 0.5s ease-in-out, width 0.7s ease-out, height 0.7s ease-out, border-color 0.3s ease-out, box-shadow 0.3s ease-out",
               }}
               onClick={() => !isExpanded && handleExpand()}
             >
@@ -83,7 +89,7 @@ function App() {
                     e.stopPropagation();
                     handleCollapse();
                   }}
-                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/60 hover:bg-slate-700/80 border border-purple-500/30 hover:border-purple-400/50 text-white/80 hover:text-white transition-all duration-200 z-50"
+                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/60 hover:bg-slate-700/80 border border-purple-500/30 hover:border-purple-400/50 text-white/80 hover:text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] hover:scale-110 transition-all duration-200 z-50"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -101,25 +107,25 @@ function App() {
                   </svg>
                 </button>
               )}
-              {!isExpanded && (
-                <div className="absolute bottom-4 right-4 flex items-center gap-2 text-purple-300/60 text-sm pointer-events-none">
-                  <span>Click to expand</span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
-                    />
-                  </svg>
-                </div>
-              )}
+              <div
+                className={`absolute bottom-4 right-4 flex items-center gap-2 text-purple-300/60 text-sm pointer-events-none transition-opacity duration-500 ${!isExpanded && !isTransitioning ? "opacity-100" : "opacity-0"}`}
+              >
+                <span>Click to expand</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
+                  />
+                </svg>
+              </div>
               {/* <p className="text-purple-300 text-lg">3D Home Preview</p> */}
               <Canvas
                 camera={{ position: [2.8, 1.5, 3.4], fov: 50 }}
