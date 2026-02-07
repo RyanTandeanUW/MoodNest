@@ -1,33 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import ReactPlayer from "react-player";
 import "./index.css";
 import "./App.css";
 import Hero from "./components/Hero";
 
 function App() {
+  const [vibe, setVibe] = useState(null);
+
+  // Function to sync with your FastAPI backend
+  const fetchCurrentVibe = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/state");
+      const data = await response.json();
+      setVibe(data);
+    } catch (error) {
+      console.error("Backend unreachable. Ensure FastAPI is running.");
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentVibe(); // Initial fetch
+    const interval = setInterval(fetchCurrentVibe, 2000); // Check for updates every 2s
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-900">
-      {/* Animated wave backgrounds */}
+    <div className="min-h-screen relative overflow-hidden bg-slate-900 transition-colors duration-1000">
+      {/* Dynamic Background Waves */}
       <div className="absolute inset-0 wave opacity-40">
-        <div className="absolute top-1/4 left-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 blur-3xl"></div>
+        <div 
+          className="absolute top-1/4 left-1/4 w-[800px] h-[800px] rounded-full blur-3xl transition-all duration-1000"
+          style={{ backgroundColor: vibe?.color || "#4f46e5" }}
+        ></div>
       </div>
-      <div className="absolute inset-0 wave-slow opacity-30">
-        <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] rounded-full bg-gradient-to-tl from-purple-700 via-pink-600 to-indigo-700 blur-3xl"></div>
-      </div>
-      <div className="absolute inset-0 wave-slower opacity-35">
-        <div className="absolute bottom-1/4 left-1/3 w-[700px] h-[700px] rounded-full bg-gradient-to-tr from-pink-600 via-purple-700 to-indigo-600 blur-3xl"></div>
-      </div>
-      <div className="absolute inset-0 wave opacity-25">
-        <div className="absolute bottom-1/3 right-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-bl from-indigo-500 to-purple-600 blur-3xl"></div>
-      </div>
-      <div className="absolute inset-0 wave-slow opacity-30">
-        <div className="absolute top-1/2 left-1/2 w-[650px] h-[650px] rounded-full bg-gradient-to-r from-pink-500 to-indigo-500 blur-3xl"></div>
-      </div>
-      <div className="absolute inset-0 wave-slower opacity-28">
-        <div className="absolute top-2/3 right-1/2 w-[550px] h-[550px] rounded-full bg-gradient-to-tl from-purple-500 to-pink-500 blur-3xl"></div>
-      </div>
-      <div className="absolute inset-0 wave opacity-32">
-        <div className="absolute top-1/4 right-1/3 w-[480px] h-[480px] rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 blur-3xl"></div>
-      </div>
+      
+      {/* Hidden Music Player */}
+      {vibe?.youtube_id && (
+        <div style={{ display: 'none' }}>
+          <ReactPlayer
+            url={`https://www.youtube.com/watch?v=${vibe.youtube_id}`}
+            playing={true}
+            loop={true}
+            volume={0.5}
+            config={{
+              youtube: {
+                playerVars: { autoplay: 1 }
+              }
+            }}
+          />
+        </div>
+      )}
 
       {/* Semi-transparent overlay */}
       <div className="absolute inset-0 bg-slate-900/30"></div>
@@ -37,9 +59,20 @@ function App() {
         <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <Hero />
 
-          {/* Right Side - 3D Apartment Preview */}
-          <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl border border-purple-500/30 aspect-square flex items-center justify-center">
-            <p className="text-purple-300 text-lg">3D Home Preview</p>
+          {/* Right Side - Reactive 3D Preview */}
+          <div 
+            className="bg-slate-800/30 backdrop-blur-sm rounded-2xl border aspect-square flex flex-col items-center justify-center transition-all duration-700"
+            style={{ borderColor: vibe ? `${vibe.color}66` : "rgba(168, 85, 247, 0.3)" }}
+          >
+            <p className="text-purple-300 text-lg mb-4">3D Home Preview</p>
+            {vibe && (
+              <div className="text-center animate-pulse">
+                <p className="text-white font-bold text-xl uppercase tracking-tighter">
+                  {vibe.label} Mode
+                </p>
+                <p className="text-xs text-purple-200 mt-2 opacity-60">Music ID: {vibe.youtube_id}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
