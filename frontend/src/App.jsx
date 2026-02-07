@@ -2,8 +2,30 @@ import { useState } from "react";
 import "./index.css";
 import "./App.css";
 import Hero from "./components/Hero";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import ApartmentModel from "./components/ApartmentModel";
 
 function App() {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const handleExpand = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setIsExpanded(true);
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 300);
+  };
+
+  const handleCollapse = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setIsExpanded(false);
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 300);
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-900">
       {/* Animated wave backgrounds */}
@@ -34,12 +56,102 @@ function App() {
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-8">
-        <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <Hero />
+        <div
+          className={`w-full transition-all duration-700 ${isExpanded ? "max-w-none" : "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"}`}
+        >
+          {!isExpanded && <Hero />}
 
           {/* Right Side - 3D Apartment Preview */}
-          <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl border border-purple-500/30 aspect-square flex items-center justify-center">
-            <p className="text-purple-300 text-lg">3D Home Preview</p>
+          <div
+            className={`${isExpanded ? "fixed inset-0 z-50 flex items-center justify-center p-8" : "relative"}`}
+          >
+            <div
+              className={`bg-slate-800/30 backdrop-blur-sm rounded-2xl border border-purple-500/30 flex items-center justify-center ${
+                isExpanded
+                  ? "w-full h-full"
+                  : "aspect-[4/3] cursor-pointer hover:border-purple-300/80 hover:shadow-[0_0_40px_rgba(168,85,247,0.4)]"
+              } ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+              style={{
+                transition:
+                  "opacity 0.3s ease-in-out, width 0.7s ease-out, height 0.7s ease-out, border-color 0.3s ease-out, box-shadow 0.3s ease-out",
+              }}
+              onClick={() => !isExpanded && handleExpand()}
+            >
+              {isExpanded && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCollapse();
+                  }}
+                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/60 hover:bg-slate-700/80 border border-purple-500/30 hover:border-purple-400/50 text-white/80 hover:text-white transition-all duration-200 z-50"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
+              {!isExpanded && (
+                <div className="absolute bottom-4 right-4 flex items-center gap-2 text-purple-300/60 text-sm pointer-events-none">
+                  <span>Click to expand</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
+                    />
+                  </svg>
+                </div>
+              )}
+              {/* <p className="text-purple-300 text-lg">3D Home Preview</p> */}
+              <Canvas
+                camera={{ position: [2.8, 1.5, 3.4], fov: 50 }}
+                dpr={[1, 2]}
+              >
+                {/* Soft global light */}
+                <ambientLight intensity={0.8} />
+
+                {/* Main directional light */}
+                <directionalLight
+                  position={[5, 5, 5]}
+                  intensity={1.5}
+                  castShadow
+                  shadow-mapSize-width={2048}
+                  shadow-mapSize-height={2048}
+                />
+
+                {/* Fill light from the opposite side */}
+                <directionalLight position={[-5, 2, -3]} intensity={0.6} />
+
+                <ApartmentModel />
+
+                {/* Orbit Controls for rotating/panning the model */}
+                <OrbitControls
+                  enablePan={true}
+                  enableZoom={true}
+                  enableRotate={true}
+                  minDistance={2}
+                  maxDistance={8}
+                />
+              </Canvas>
+            </div>
           </div>
         </div>
       </div>
