@@ -12,40 +12,33 @@ app.add_middleware(
 )
 
 VIBE_PRESETS = {
-    "focus": {
-        "label": "Deep Work",
-        "color": "#00E5FF",  # Electric Cyan
+    "happy": {
+        "label": "Energetic",
+        "color": "#DFDB1C",  # Electric Cyan
         "intensity": 1.5,
-        "curtains": "open",
-        "ac_temp": 21
+        # "curtains": "open",
+        # "ac_temp": 21
     },
-    "chill": {
-        "label": "Relaxing",
-        "color": "#FFCC80",  # Soft Peach/Orange
+    "sad": {
+        "label": "Calming",
+        "color": "#3805F0",  # Soft Peach/Orange
         "intensity": 0.4,
-        "curtains": "half",
-        "ac_temp": 23
+        # "curtains": "half",
+        # "ac_temp": 23
     },
-    "chaos": {
-        "label": "High Energy",
+    "angry": {
+        "label": "Intense",
         "color": "#FF0055",  # Neon Pink/Red
         "intensity": 2.5,
-        "curtains": "closed",
-        "ac_temp": 18
+        # "curtains": "closed",
+        # "ac_temp": 18
     },
-    "forest": {
-        "label": "Nature/Zen",
-        "color": "#2ECC71",  # Emerald Green
+    "neutral": {
+        "label": "Balanced",
+        "color": "#FFFFFF",  # White
         "intensity": 0.6,
-        "curtains": "open",
-        "ac_temp": 22
-    },
-    "midnight": {
-        "label": "Sleepy",
-        "color": "#1A237E",  # Deep Indigo
-        "intensity": 0.2,
-        "curtains": "closed",
-        "ac_temp": 20
+        # "curtains": "open",
+        # "ac_temp": 22
     }
 }
 
