@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react"; // Added useEffect and useRef
 import "./index.css";
 import "./App.css";
 import Hero from "./components/Hero";
@@ -13,30 +13,36 @@ function App() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentMood, setCurrentMood] = useState("neutral");
   
-  // NEW: State for sound toggle
+  // NEW: State for audio control
   const [isMuted, setIsMuted] = useState(false);
-  
   const audioRef = useRef(new Audio());
 
-  // Effect to sync music whenever currentMood or isMuted changes
+  /**
+   * Sync Music with Mood
+   * Fetches the latest track from the backend whenever currentMood changes.
+   */
   useEffect(() => {
     const syncMusic = async () => {
       try {
         const res = await fetch("http://localhost:8000/state");
         const data = await res.json();
         
-        // Change: Use the track URL directly since it's already a full link
-        const trackUrl = data.vibe_details.track;
+        // Ensure we have a track URL from your Google Drive presets
+        if (data?.vibe_details?.track) {
+          const trackUrl = data.vibe_details.track;
 
-        if (audioRef.current.src !== trackUrl) {
-          audioRef.current.src = trackUrl;
-          audioRef.current.loop = true;
-        }
+          if (audioRef.current.src !== trackUrl) {
+            audioRef.current.src = trackUrl;
+            audioRef.current.loop = true;
+          }
 
-        if (isMuted) {
-          audioRef.current.pause();
-        } else {
-          audioRef.current.play().catch(() => console.log("User interaction required"));
+          // Handle Play/Pause based on mute state
+          if (isMuted) {
+            audioRef.current.pause();
+          } else {
+            // Play only after user has interacted with the page
+            audioRef.current.play().catch(() => console.log("Audio waiting for user click..."));
+          }
         }
       } catch (e) {
         console.error("Music sync failed:", e);
@@ -46,7 +52,6 @@ function App() {
   }, [currentMood, isMuted]);
 
   const handleRecordingComplete = (result) => {
-    console.log("Recording complete!", result);
     if (result.success && result.detected_mood) {
       setCurrentMood(result.detected_mood);
     }
@@ -70,7 +75,8 @@ function App() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-900">
-      <div className="absolute inset-0 bg-slate-900/30 z-0"></div>
+      {/* Background waves remain the same... */}
+      <div className="absolute inset-0 bg-slate-900/30"></div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-8">
         <div className={`w-full transition-all duration-700 ${isExpanded ? "max-w-none" : "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"}`}>
@@ -89,10 +95,10 @@ function App() {
             >
               {isExpanded && (
                 <>
-                  {/* Toggle Sound Button */}
+                  {/* NEW: Sound Toggle Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                    className="absolute top-4 right-16 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/60 border border-purple-500/30 text-white z-50 hover:bg-purple-500/20 transition-colors"
+                    className="absolute top-4 right-16 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/60 border border-purple-500/30 text-white z-50 hover:bg-purple-500/30"
                   >
                     {isMuted ? "🔇" : "🔊"}
                   </button>
@@ -110,11 +116,8 @@ function App() {
                 </>
               )}
 
-              <Canvas
-                camera={{ position: [2.8, 1.5, 3.4], fov: 50 }}
-                shadows
-                gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
-              >
+              {/* Three.js Canvas remains the same... */}
+              <Canvas camera={{ position: [2.8, 1.5, 3.4], fov: 50 }} shadows>
                 <ambientLight intensity={0.8} />
                 <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
                 <ApartmentModel mood={currentMood} />
