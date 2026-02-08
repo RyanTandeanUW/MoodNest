@@ -5,6 +5,7 @@ import Hero from "./components/Hero";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import ApartmentModel from "./components/ApartmentModel";
+import * as THREE from "three";
 
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -130,17 +131,34 @@ function App() {
               <Canvas
                 camera={{ position: [2.8, 1.5, 3.4], fov: 50 }}
                 dpr={[1, 2]}
+                shadows
+                gl={{
+                  antialias: true,
+                  powerPreference: "high-performance",
+                  toneMapping: THREE.ACESFilmicToneMapping,
+                  toneMappingExposure: 1.0,
+                }}
+                performance={{ min: 0.5 }}
               >
                 {/* Soft global light */}
                 <ambientLight intensity={0.8} />
 
-                {/* Main directional light */}
+                {/* Main directional light - optimized shadow settings */}
                 <directionalLight
                   position={[5, 5, 5]}
                   intensity={1.5}
                   castShadow
-                  shadow-mapSize-width={2048}
-                  shadow-mapSize-height={2048}
+                  shadow-mapSize-width={1024}
+                  shadow-mapSize-height={1024}
+                  shadow-bias={-0.0001}
+                  shadow-normalBias={0.02}
+                  shadow-camera-near={0.5}
+                  shadow-camera-far={20}
+                  shadow-camera-left={-8}
+                  shadow-camera-right={8}
+                  shadow-camera-top={8}
+                  shadow-camera-bottom={-8}
+                  shadow-radius={1.5}
                 />
 
                 {/* Fill light from the opposite side */}
@@ -148,11 +166,13 @@ function App() {
 
                 <ApartmentModel />
 
-                {/* Orbit Controls for rotating/panning the model */}
+                {/* Orbit Controls - optimized for smoother interaction */}
                 <OrbitControls
                   enablePan={true}
                   enableZoom={true}
                   enableRotate={true}
+                  enableDamping={true}
+                  dampingFactor={0.05}
                   minDistance={2}
                   maxDistance={8}
                 />

@@ -2,6 +2,12 @@ import { useRef, useEffect } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
+// Lamp detection keywords (cached outside component)
+const LAMP_KEYWORDS = ["lamp", "light", "bulb", "fixture", "pendant", "sconce"];
+
+// Enable debug mode to see detailed mesh info
+const DEBUG_MODE = false;
+
 /**
  * ApartmentModel
  *
@@ -15,7 +21,7 @@ export default function ApartmentModel(props) {
   const group = useRef();
 
   // Load the GLB scene
-  const { scene } = useGLTF("/apartment.glb");
+  const { scene } = useGLTF("/apartment2.glb");
 
   useEffect(() => {
     if (!scene || !group.current) return;
@@ -26,6 +32,70 @@ export default function ApartmentModel(props) {
      * This prevents issues if the model is reused elsewhere.
      */
     const clonedScene = scene.clone(true);
+
+    // Debug logging (only if enabled)
+    if (DEBUG_MODE) {
+      let meshCount = 0;
+      clonedScene.traverse((child) => {
+        if (child.isMesh) {
+          meshCount++;
+          console.log(`MESH #${meshCount}: "${child.name}"`);
+        }
+      });
+      console.log(`Total meshes: ${meshCount}`);
+    }
+
+    /**
+     * Enable shadows and setup lamps (single traversal for performance)
+     */
+    let lampCount = 0;
+
+    clonedScene.traverse((child) => {
+      if (child.isMesh) {
+        // Enable shadows
+        child.castShadow = true;
+        child.receiveShadow = true;
+
+        // Optimize textures if they exist
+        if (child.material?.map) {
+          child.material.map.anisotropy = 16;
+          child.material.map.generateMipmaps = true;
+        }
+
+        // Check if this mesh is a lamp
+        const meshName = child.name.toLowerCase();
+        const isLamp = LAMP_KEYWORDS.some((keyword) =>
+          meshName.includes(keyword),
+        );
+
+        if (isLamp) {
+          lampCount++;
+
+          // Make the lamp glow
+          child.material = new THREE.MeshStandardMaterial({
+            color: 0xffffcc,
+            emissive: 0xffffaa,
+            emissiveIntensity: 0.5,
+            metalness: 0.1,
+            roughness: 0.2,
+          });
+
+          // Add optimized point light at lamp position
+          const pointLight = new THREE.PointLight(0xffffcc, 0.6, 10);
+          pointLight.position.copy(child.position);
+          pointLight.castShadow = true;
+          pointLight.shadow.mapSize.width = 512; // Reduced for performance
+          pointLight.shadow.mapSize.height = 512;
+          pointLight.shadow.radius = 2; // Soften shadows
+
+          child.parent.add(pointLight);
+
+          if (DEBUG_MODE) console.log(`💡 Lamp "${child.name}" on`);
+        }
+      }
+    });
+
+    if (DEBUG_MODE) console.log(`💡 ${lampCount} lamps turned on`);
 
     /**
      * Compute the bounding box of the model.
@@ -73,3 +143,6 @@ export default function ApartmentModel(props) {
 
   return <group ref={group} {...props} />;
 }
+
+// Preload the model for better performance
+useGLTF.preload("/apartment2.glb");
