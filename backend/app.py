@@ -4,6 +4,7 @@ import json
 import base64
 import threading
 from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
 
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,12 +28,43 @@ app.add_middleware(
 )
 
 # Core mood presets
+
+# --- Update lines 31-36 in your app.py ---
 VIBE_PRESETS = {
-    "happy": {"label": "Energetic", "color": "#DFDB1C", "intensity": 1.5},
-    "sad": {"label": "Calming", "color": "#3805F0", "intensity": 0.4},
-    "angry": {"label": "Intense", "color": "#FF0055", "intensity": 2.5},
-    "neutral": {"label": "Balanced", "color": "#FFFFFF", "intensity": 0.6}
+    "happy": {
+        "label": "Energetic", 
+        "color": "#DFDB1C", 
+        "intensity": 1.5, 
+        # Replace the URL below with your actual happy.mp3 public link + &raw=1
+        "track": "https://www.dropbox.com/scl/fi/alhlajib2osutreupqlg1/happy.mp3?rlkey=x4kh98gh9u85imlndjj9ifbvf&st=w5f0kkyc&raw=1" 
+    },
+    "sad": {
+        "label": "Calming", 
+        "color": "#3805F0", 
+        "intensity": 0.4, 
+        # Verified link with &raw=1 added for direct streaming
+        "track": "https://www.dropbox.com/scl/fi/aoysxjirs7k7meoquhf86/sad.mp3?rlkey=yiojizqwkjqjmbjblfgigtkuz&st=ehcdr5pr&raw=1" 
+    },
+    "angry": {
+        "label": "Intense", 
+        "color": "#FF0055", 
+        "intensity": 2.5, 
+        "track": "https://www.dropbox.com/scl/fi/b64c0zwdts6smrmurg2eq/angry.mp3?rlkey=g4oa7ejk56112puioyzvd9zrj&st=p0jg2rrw&raw=1"
+    },
+    "neutral": {
+        "label": "Balanced", 
+        "color": "#FFFFFF", 
+        "intensity": 0.6, 
+    }
 }
+# --- ADD THIS AFTER app = FastAPI(...) ---
+# This serves files from a folder named "music" in your project directory
+if not os.path.exists("music"):
+    os.makedirs("music")
+
+app.mount("/music", StaticFiles(directory="music"), name="music")
+
+
 
 class MoodNestState:
     def __init__(self):
