@@ -5,10 +5,18 @@ import Hero from "./components/Hero";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import ApartmentModel from "./components/ApartmentModel";
+import VoiceRecorder from "./components/VoiceRecorder";
+import * as THREE from "three";
 
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const handleRecordingComplete = (result) => {
+    console.log("Recording complete!", result);
+    // TODO: Update UI based on detected mood
+    // You can set the vibe, change lighting, etc.
+  };
 
   const handleExpand = () => {
     setIsTransitioning(true);
@@ -84,28 +92,38 @@ function App() {
               onClick={() => !isExpanded && handleExpand()}
             >
               {isExpanded && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCollapse();
-                  }}
-                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/60 hover:bg-slate-700/80 border border-purple-500/30 hover:border-purple-400/50 text-white/80 hover:text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] hover:scale-110 transition-all duration-200 z-50"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="w-5 h-5"
+                <>
+                  {/* Close Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCollapse();
+                    }}
+                    className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/60 hover:bg-slate-700/80 border border-purple-500/30 hover:border-purple-400/50 text-white/80 hover:text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] hover:scale-110 transition-all duration-200 z-50"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Voice Recorder - Bottom Center */}
+                  <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+                    <VoiceRecorder
+                      onRecordingComplete={handleRecordingComplete}
                     />
-                  </svg>
-                </button>
+                  </div>
+                </>
               )}
               <div
                 className={`absolute bottom-4 right-4 flex items-center gap-2 text-purple-300/60 text-sm pointer-events-none transition-opacity duration-500 ${!isExpanded && !isTransitioning ? "opacity-100" : "opacity-0"}`}
@@ -130,17 +148,34 @@ function App() {
               <Canvas
                 camera={{ position: [2.8, 1.5, 3.4], fov: 50 }}
                 dpr={[1, 2]}
+                shadows
+                gl={{
+                  antialias: true,
+                  powerPreference: "high-performance",
+                  toneMapping: THREE.ACESFilmicToneMapping,
+                  toneMappingExposure: 1.0,
+                }}
+                performance={{ min: 0.5 }}
               >
                 {/* Soft global light */}
                 <ambientLight intensity={0.8} />
 
-                {/* Main directional light */}
+                {/* Main directional light - optimized shadow settings */}
                 <directionalLight
                   position={[5, 5, 5]}
                   intensity={1.5}
                   castShadow
-                  shadow-mapSize-width={2048}
-                  shadow-mapSize-height={2048}
+                  shadow-mapSize-width={1024}
+                  shadow-mapSize-height={1024}
+                  shadow-bias={-0.0001}
+                  shadow-normalBias={0.02}
+                  shadow-camera-near={0.5}
+                  shadow-camera-far={20}
+                  shadow-camera-left={-8}
+                  shadow-camera-right={8}
+                  shadow-camera-top={8}
+                  shadow-camera-bottom={-8}
+                  shadow-radius={1.5}
                 />
 
                 {/* Fill light from the opposite side */}
@@ -148,11 +183,13 @@ function App() {
 
                 <ApartmentModel />
 
-                {/* Orbit Controls for rotating/panning the model */}
+                {/* Orbit Controls - optimized for smoother interaction */}
                 <OrbitControls
                   enablePan={true}
                   enableZoom={true}
                   enableRotate={true}
+                  enableDamping={true}
+                  dampingFactor={0.05}
                   minDistance={2}
                   maxDistance={8}
                 />

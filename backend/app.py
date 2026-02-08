@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+import io
 
 import speech_recognition as sr
 import google.generativeai as genai

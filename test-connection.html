@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Backend Connection Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #1e293b;
+        color: white;
+      }
+      button {
+        padding: 12px 24px;
+        margin: 10px;
+        font-size: 16px;
+        cursor: pointer;
+        background: #8b5cf6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+      }
+      button:hover {
+        background: #7c3aed;
+      }
+      #result {
+        margin-top: 20px;
+        padding: 15px;
+        background: #334155;
+        border-radius: 8px;
+        white-space: pre-wrap;
+      }
+      .success {
+        color: #4ade80;
+      }
+      .error {
+        color: #f87171;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Backend Connection Test</h1>
+
+    <div>
+      <button onclick="testRoot()">Test Root Endpoint (/)</button>
+      <button onclick="testState()">Test State Endpoint (/state)</button>
+      <button onclick="testAudio()">Test Audio Upload</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+      const API_URL = "http://localhost:8000";
+
+      function showResult(message, isError = false) {
+        const resultDiv = document.getElementById("result");
+        resultDiv.className = isError ? "error" : "success";
+        resultDiv.textContent = message;
+      }
+
+      async function testRoot() {
+        try {
+          showResult("⏳ Testing root endpoint...");
+          const response = await fetch(`${API_URL}/`);
+          const data = await response.json();
+          showResult(`✅ Success!\n${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+          showResult(
+            `❌ Error: ${error.message}\n\nMake sure backend is running on port 8000`,
+            true,
+          );
+        }
+      }
+
+      async function testState() {
+        try {
+          showResult("⏳ Testing state endpoint...");
+          const response = await fetch(`${API_URL}/state`);
+          const data = await response.json();
+          showResult(`✅ Success!\n${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+          showResult(`❌ Error: ${error.message}`, true);
+        }
+      }
+
+      async function testAudio() {
+        try {
+          showResult("⏳ Testing audio upload endpoint...");
+
+          // Create a dummy audio blob
+          const audioBlob = new Blob(["test audio data"], {
+            type: "audio/wav",
+          });
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "test.wav");
+
+          const response = await fetch(`${API_URL}/analyze-voice`, {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+          showResult(`✅ Success!\n${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+          showResult(`❌ Error: ${error.message}`, true);
+        }
+      }
+    </script>
+  </body>
+</html>
