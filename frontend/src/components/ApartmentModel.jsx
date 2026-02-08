@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -8,17 +8,25 @@ const LAMP_KEYWORDS = ["lamp", "light", "bulb", "fixture", "pendant", "sconce"];
 // Enable debug mode to see detailed mesh info
 const DEBUG_MODE = false;
 
+// Mood presets matching backend VIBE_PRESETS
+const MOOD_PRESETS = {
+  happy: { color: 0xdfdb1c, intensity: 1.5 }, // Yellow
+  sad: { color: 0x3805f0, intensity: 0.4 }, // Blue
+  angry: { color: 0xff0055, intensity: 2.5 }, // Red
+  neutral: { color: 0xffffcc, intensity: 0.6 }, // Warm white
+};
+
 /**
  * ApartmentModel
  *
  * Loads the apartment GLB, computes its bounding box,
  * recenters it, and scales it so it fits perfectly inside
- * the preview container. This ensures the model always
- * appears centered and properly sized regardless of its
- * original coordinates inside Blender.
+ * the preview container. Dynamically changes lighting based on mood.
  */
-export default function ApartmentModel(props) {
+export default function ApartmentModel({ mood = "neutral", ...props }) {
   const group = useRef();
+  const [lampLights, setLampLights] = useState([]);
+  const [lampMeshes, setLampMeshes] = useState([]);
 
   // Load the GLB scene
   const { scene } = useGLTF("/apartment2.glb");
@@ -49,6 +57,8 @@ export default function ApartmentModel(props) {
      * Enable shadows and setup lamps (single traversal for performance)
      */
     let lampCount = 0;
+    const lights = [];
+    const meshes = [];
 
     clonedScene.traverse((child) => {
       if (child.isMesh) {
@@ -80,6 +90,9 @@ export default function ApartmentModel(props) {
             roughness: 0.2,
           });
 
+          // Store mesh reference for later updates
+          meshes.push(child);
+
           // Add optimized point light at lamp position
           const pointLight = new THREE.PointLight(0xffffcc, 0.6, 10);
           pointLight.position.copy(child.position);
@@ -89,11 +102,16 @@ export default function ApartmentModel(props) {
           pointLight.shadow.radius = 2; // Soften shadows
 
           child.parent.add(pointLight);
+          lights.push(pointLight); // Store for later updates
 
           if (DEBUG_MODE) console.log(`💡 Lamp "${child.name}" on`);
         }
       }
     });
+
+    // Store lamp references in state
+    setLampLights(lights);
+    setLampMeshes(meshes);
 
     if (DEBUG_MODE) console.log(`💡 ${lampCount} lamps turned on`);
 
@@ -140,6 +158,29 @@ export default function ApartmentModel(props) {
      */
     group.current.add(clonedScene);
   }, [scene]);
+
+  // Update lighting when mood changes
+  useEffect(() => {
+    if (lampLights.length === 0 || lampMeshes.length === 0) return;
+
+    const preset = MOOD_PRESETS[mood] || MOOD_PRESETS.neutral;
+    console.log(`💡 Changing lights to ${mood} mood:`, preset);
+
+    // Update all lamp lights
+    lampLights.forEach((light) => {
+      light.color.setHex(preset.color);
+      light.intensity = preset.intensity;
+    });
+
+    // Update all lamp mesh emissions
+    lampMeshes.forEach((mesh) => {
+      if (mesh.material) {
+        mesh.material.color.setHex(preset.color);
+        mesh.material.emissive.setHex(preset.color);
+        mesh.material.emissiveIntensity = preset.intensity * 0.3;
+      }
+    });
+  }, [mood, lampLights, lampMeshes]);
 
   return <group ref={group} {...props} />;
 }

@@ -11,11 +11,14 @@ import * as THREE from "three";
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [currentMood, setCurrentMood] = useState("neutral");
 
   const handleRecordingComplete = (result) => {
     console.log("Recording complete!", result);
-    // TODO: Update UI based on detected mood
-    // You can set the vibe, change lighting, etc.
+    if (result.success && result.detected_mood) {
+      setCurrentMood(result.detected_mood);
+      console.log("🎨 Mood changed to:", result.detected_mood);
+    }
   };
 
   const handleExpand = () => {
@@ -181,7 +184,7 @@ function App() {
                 {/* Fill light from the opposite side */}
                 <directionalLight position={[-5, 2, -3]} intensity={0.6} />
 
-                <ApartmentModel />
+                <ApartmentModel mood={currentMood} />
 
                 {/* Orbit Controls - optimized for smoother interaction */}
                 <OrbitControls
