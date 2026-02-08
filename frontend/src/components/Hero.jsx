@@ -17,7 +17,9 @@ export default function Hero() {
         className="text-2xl text-white leading-relaxed animate-fadeInUp delay-200 opacity-0 title-hover"
         style={{ fontFamily: "Inter, sans-serif" }}
       >
-        Speak your mind, and watch your home respond. MoodNest listens to your voice and adapts lighting, ambience, and music to match your mood in real time.
+        Speak your mind, and watch your home respond. MoodNest listens to your
+        voice and adapts lighting, ambience, and music to match your mood in
+        real time.
       </p>
     </div>
   );

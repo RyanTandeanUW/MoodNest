@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+import io
 
 app = FastAPI()
 
@@ -70,3 +71,40 @@ async def set_vibe(vibe_name: str):
         current_room_state = VIBE_PRESETS[vibe_name]
         return current_room_state
     return {"error": "Vibe not found"}
+
+@app.post("/analyze-voice")
+async def analyze_voice(audio: UploadFile = File(...)):
+    """
+    Receives a WAV audio file and processes it.
+    Returns the detected mood/emotion.
+    """
+    try:
+        # Read the audio file
+        audio_bytes = await audio.read()
+        audio_size = len(audio_bytes)
+        
+        print(f"📥 Received audio file: {audio.filename}")
+        print(f"📊 Size: {audio_size / 1024:.2f} KB")
+        print(f"📝 Content type: {audio.content_type}")
+        
+        # TODO: Add your audio analysis logic here
+        # For now, we'll return a mock response
+        
+        # Example: You could use speech recognition, emotion detection, etc.
+        detected_mood = "chill"  # Placeholder
+        confidence = 0.85
+        
+        return {
+            "success": True,
+            "detected_mood": detected_mood,
+            "confidence": confidence,
+            "audio_size_kb": audio_size / 1024,
+            "message": f"Audio received successfully. Detected mood: {detected_mood}"
+        }
+        
+    except Exception as e:
+        print(f"❌ Error processing audio: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
