@@ -1,4 +1,6 @@
 import { useState, useRef } from "react";
+import ResultPopup from "./ResultPopup";
+import RecordButton from "./RecordButton";
 
 /**
  * VoiceRecorder
@@ -68,6 +70,8 @@ export default function VoiceRecorder({ onRecordingComplete }) {
       if (response.ok) {
         const result = await response.json();
         console.log("Backend response:", result);
+        console.log("Success field:", result.success);
+        console.log("Should show yellow?", !result.success);
 
         // Show the result
         setLastResult(result);
@@ -78,12 +82,16 @@ export default function VoiceRecorder({ onRecordingComplete }) {
           setShowResult(false);
         }, 5000);
 
-        if (onRecordingComplete) {
+        // Only pass successful mood detections to parent
+        if (result.success && onRecordingComplete) {
           onRecordingComplete(result);
         }
       } else {
         console.error("Failed to send audio:", response.statusText);
-        setLastResult({ success: false, error: "Failed to connect to backend" });
+        setLastResult({
+          success: false,
+          error: "Failed to connect to backend",
+        });
         setShowResult(true);
         setTimeout(() => setShowResult(false), 5000);
       }
@@ -98,97 +106,27 @@ export default function VoiceRecorder({ onRecordingComplete }) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <button
-        onMouseDown={startRecording}
-        onMouseUp={stopRecording}
-        onTouchStart={startRecording}
-        onTouchEnd={stopRecording}
-        disabled={isProcessing}
-        className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 ${
-          isRecording
-            ? "bg-red-500 scale-110 shadow-[0_0_30px_rgba(239,68,68,0.6)]"
-            : "bg-purple-600 hover:bg-purple-500"
-        } ${
-          isProcessing ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
-        } shadow-lg`}
-      >
-        {isProcessing ? (
-          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className="w-8 h-8 text-white"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"
-            />
-          </svg>
-        )}
+    <>
+      <ResultPopup result={lastResult} show={showResult} />
 
-        {/* Recording pulse animation */}
-        {isRecording && (
-          <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
-        )}
-      </button>
+      <div className="flex flex-col items-center gap-4">
+        <RecordButton
+          isRecording={isRecording}
+          isProcessing={isProcessing}
+          onMouseDown={startRecording}
+          onMouseUp={stopRecording}
+          onTouchStart={startRecording}
+          onTouchEnd={stopRecording}
+        />
 
-      <p className="text-sm text-purple-300">
-        {isRecording
-          ? "🎙️ Recording... Release to send"
-          : isProcessing
-            ? "⏳ Processing..."
-            : "Hold to record"}
-      </p>
-
-      {/* Result Display */}
-      {showResult && lastResult && (
-        <div
-          className={`mt-4 p-4 rounded-lg border ${
-            lastResult.success
-              ? "bg-green-500/10 border-green-500/30 text-green-300"
-              : "bg-red-500/10 border-red-500/30 text-red-300"
-          } animate-fadeInUp max-w-xs text-center`}
-        >
-          {lastResult.success ? (
-            <>
-              <div className="text-2xl mb-2">
-                {lastResult.detected_mood === "focus" && "🎯"}
-                {lastResult.detected_mood === "chill" && "😌"}
-                {lastResult.detected_mood === "chaos" && "⚡"}
-                {lastResult.detected_mood === "forest" && "🌲"}
-                {lastResult.detected_mood === "midnight" && "🌙"}
-              </div>
-              <div className="font-semibold text-lg capitalize">
-                {lastResult.detected_mood}
-              </div>
-              {lastResult.confidence && (
-                <div className="text-sm opacity-80 mt-1">
-                  {Math.round(lastResult.confidence * 100)}% confidence
-                </div>
-              )}
-              {lastResult.message && (
-                <div className="text-xs mt-2 opacity-70">
-                  {lastResult.message}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="text-2xl mb-2">❌</div>
-              <div className="font-semibold">Error</div>
-              <div className="text-xs mt-2 opacity-80">
-                {lastResult.error || "Failed to process audio"}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </div>
+        <p className="text-sm text-purple-300">
+          {isRecording
+            ? "🎙️ Recording... Release to send"
+            : isProcessing
+              ? "⏳ Processing..."
+              : "Hold to record"}
+        </p>
+      </div>
+    </>
   );
 }
