@@ -97,9 +97,10 @@ export default function ApartmentModel({ mood = "neutral", ...props }) {
           const pointLight = new THREE.PointLight(0xffffcc, 0.6, 10);
           pointLight.position.copy(child.position);
           pointLight.castShadow = true;
-          pointLight.shadow.mapSize.width = 512; // Reduced for performance
-          pointLight.shadow.mapSize.height = 512;
-          pointLight.shadow.radius = 2; // Soften shadows
+          pointLight.shadow.mapSize.width = 1024;
+          pointLight.shadow.mapSize.height = 1024;
+          pointLight.shadow.bias = -0.005;
+          pointLight.shadow.normalBias = 0.05;
 
           child.parent.add(pointLight);
           lights.push(pointLight); // Store for later updates

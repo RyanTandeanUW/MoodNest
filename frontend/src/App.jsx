@@ -151,12 +151,16 @@ function App() {
               <Canvas
                 camera={{ position: [2.8, 1.5, 3.4], fov: 50 }}
                 dpr={[1, 2]}
-                shadows
+                shadows="soft"
                 gl={{
                   antialias: true,
                   powerPreference: "high-performance",
                   toneMapping: THREE.ACESFilmicToneMapping,
                   toneMappingExposure: 1.0,
+                }}
+                onCreated={({ gl }) => {
+                  gl.shadowMap.enabled = true;
+                  gl.shadowMap.type = THREE.PCFSoftShadowMap;
                 }}
                 performance={{ min: 0.5 }}
               >
@@ -168,17 +172,16 @@ function App() {
                   position={[5, 5, 5]}
                   intensity={1.5}
                   castShadow
-                  shadow-mapSize-width={1024}
-                  shadow-mapSize-height={1024}
-                  shadow-bias={-0.0001}
-                  shadow-normalBias={0.02}
+                  shadow-mapSize-width={2048}
+                  shadow-mapSize-height={2048}
+                  shadow-bias={-0.0005}
+                  shadow-normalBias={0.05}
                   shadow-camera-near={0.5}
                   shadow-camera-far={20}
                   shadow-camera-left={-8}
                   shadow-camera-right={8}
                   shadow-camera-top={8}
                   shadow-camera-bottom={-8}
-                  shadow-radius={1.5}
                 />
 
                 {/* Fill light from the opposite side */}
