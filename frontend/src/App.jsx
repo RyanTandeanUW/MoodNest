@@ -1,3 +1,12 @@
+/**
+ * MoodNest - Main Application Component
+ *
+ * This is the heart of MoodNest. It handles:
+ * - Displaying the hero section and 3D apartment preview
+ * - Expanding the apartment view to fullscreen
+ * - Managing the current mood state (happy, sad, angry, neutral)
+ * - Passing mood changes to the 3D apartment for lighting updates
+ */
 import { useState } from "react";
 import "./index.css";
 import "./App.css";
@@ -9,10 +18,19 @@ import VoiceRecorder from "./components/VoiceRecorder";
 import * as THREE from "three";
 
 function App() {
+  // Track whether the apartment view is expanded to fullscreen
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Track if we're currently animating between states
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // The current detected mood - this drives the apartment's lighting
   const [currentMood, setCurrentMood] = useState("neutral");
 
+  /**
+   * Called when voice recording successfully detects a mood
+   * Updates the apartment's lighting to match the detected emotion
+   */
   const handleRecordingComplete = (result) => {
     console.log("Recording complete!", result);
     if (result.success && result.detected_mood) {
@@ -21,6 +39,10 @@ function App() {
     }
   };
 
+  /**
+   * Expands the apartment view to fill the entire screen
+   * Uses a short animation to make the transition smooth
+   */
   const handleExpand = () => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -29,6 +51,10 @@ function App() {
     }, 500);
   };
 
+  /**
+   * Collapses the apartment view back to the side-by-side layout
+   * Returns to showing the hero section alongside the preview
+   */
   const handleCollapse = () => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -39,7 +65,11 @@ function App() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-900">
-      {/* Animated wave backgrounds */}
+      {/* 
+        Animated Background Layers
+        Multiple animated gradients create a dynamic, flowing background effect
+        Each "wave" moves at a different speed for depth
+      */}
       <div className="absolute inset-0 wave opacity-40">
         <div className="absolute top-1/4 left-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 blur-3xl"></div>
       </div>
@@ -62,14 +92,15 @@ function App() {
         <div className="absolute top-1/4 right-1/3 w-[480px] h-[480px] rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 blur-3xl"></div>
       </div>
 
-      {/* Semi-transparent overlay */}
+      {/* Semi-transparent overlay to prevent background from overwhelming content */}
       <div className="absolute inset-0 bg-slate-900/30"></div>
 
-      {/* Content */}
+      {/* Main Content Container */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-8">
         <div
           className={`w-full transition-all duration-700 ${isExpanded ? "max-w-none" : "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"}`}
         >
+          {/* Left Side - Hero/Landing Content (hidden when expanded) */}
           <div
             className={`transition-opacity duration-700 ${
               isExpanded || isTransitioning ? "opacity-0" : "opacity-100"
@@ -78,7 +109,7 @@ function App() {
             {!isExpanded && <Hero />}
           </div>
 
-          {/* Right Side - 3D Apartment Preview */}
+          {/* Right Side - Interactive 3D Apartment Preview */}
           <div
             className={`${isExpanded ? "fixed inset-0 z-50 flex items-center justify-center p-8" : "relative"}`}
           >
@@ -96,7 +127,7 @@ function App() {
             >
               {isExpanded && (
                 <>
-                  {/* Close Button */}
+                  {/* Close Button - Returns to side-by-side view */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -120,7 +151,7 @@ function App() {
                     </svg>
                   </button>
 
-                  {/* Voice Recorder - Bottom Center */}
+                  {/* Voice Recorder - Only visible in fullscreen mode */}
                   <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-50">
                     <VoiceRecorder
                       onRecordingComplete={handleRecordingComplete}
@@ -128,6 +159,8 @@ function App() {
                   </div>
                 </>
               )}
+
+              {/* Hint to click for fullscreen - only shown in preview mode */}
               <div
                 className={`absolute bottom-4 right-4 flex items-center gap-2 text-purple-300/60 text-sm pointer-events-none transition-opacity duration-500 ${!isExpanded && !isTransitioning ? "opacity-100" : "opacity-0"}`}
               >
@@ -147,27 +180,34 @@ function App() {
                   />
                 </svg>
               </div>
-              {/* <p className="text-purple-300 text-lg">3D Home Preview</p> */}
+
+              {/* 
+                Three.js Canvas - Renders the 3D apartment
+                Configured for optimal performance and visual quality
+              */}
               <Canvas
                 camera={{ position: [2.8, 1.5, 3.4], fov: 50 }}
-                dpr={[1, 2]}
-                shadows="soft"
+                dpr={[1, 2]} // Device pixel ratio for crisp rendering
+                shadows="soft" // Enable soft shadows
                 gl={{
-                  antialias: true,
+                  antialias: true, // Smooth edges
                   powerPreference: "high-performance",
-                  toneMapping: THREE.ACESFilmicToneMapping,
+                  toneMapping: THREE.ACESFilmicToneMapping, // Cinematic color grading
                   toneMappingExposure: 1.0,
                 }}
                 onCreated={({ gl }) => {
+                  // Configure shadow quality
                   gl.shadowMap.enabled = true;
                   gl.shadowMap.type = THREE.PCFSoftShadowMap;
                 }}
-                performance={{ min: 0.5 }}
+                performance={{ min: 0.5 }} // Maintain at least 30fps
               >
-                {/* Soft global light */}
+                {/* Lighting Setup */}
+
+                {/* Ambient light provides base illumination throughout the scene */}
                 <ambientLight intensity={0.8} />
 
-                {/* Main directional light - optimized shadow settings */}
+                {/* Main directional light - simulates sunlight with shadows */}
                 <directionalLight
                   position={[5, 5, 5]}
                   intensity={1.5}
@@ -184,17 +224,18 @@ function App() {
                   shadow-camera-bottom={-8}
                 />
 
-                {/* Fill light from the opposite side */}
+                {/* Fill light - softens shadows and adds depth */}
                 <directionalLight position={[-5, 2, -3]} intensity={0.6} />
 
+                {/* The apartment 3D model - receives mood changes */}
                 <ApartmentModel mood={currentMood} />
 
-                {/* Orbit Controls - optimized for smoother interaction */}
+                {/* Camera controls - allows user to rotate, pan, and zoom */}
                 <OrbitControls
                   enablePan={true}
                   enableZoom={true}
                   enableRotate={true}
-                  enableDamping={true}
+                  enableDamping={true} // Smooth, inertial movement
                   dampingFactor={0.05}
                   minDistance={2}
                   maxDistance={8}

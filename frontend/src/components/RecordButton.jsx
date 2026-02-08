@@ -1,7 +1,13 @@
 /**
- * RecordButton
+ * RecordButton - Interactive voice recording button
  *
- * A circular button for recording audio with visual feedback.
+ * A circular button that changes appearance based on recording state.
+ * Supports both mouse and touch interactions for broad device compatibility.
+ *
+ * Visual states:
+ * - Default: Purple, ready to record
+ * - Recording: Red with pulsing animation
+ * - Processing: Disabled with loading spinner
  */
 export default function RecordButton({
   isRecording,
@@ -20,15 +26,17 @@ export default function RecordButton({
       disabled={isProcessing}
       className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 ${
         isRecording
-          ? "bg-red-500 scale-110 shadow-[0_0_30px_rgba(239,68,68,0.6)]"
-          : "bg-purple-600 hover:bg-purple-500"
+          ? "bg-red-500 scale-110 shadow-[0_0_30px_rgba(239,68,68,0.6)]" // Red glow when recording
+          : "bg-purple-600 hover:bg-purple-500" // Purple default
       } ${
         isProcessing ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
       } shadow-lg`}
     >
       {isProcessing ? (
+        // Loading spinner while processing audio
         <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
       ) : (
+        // Microphone icon
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -45,7 +53,7 @@ export default function RecordButton({
         </svg>
       )}
 
-      {/* Recording pulse animation */}
+      {/* Animated pulse ring when recording */}
       {isRecording && (
         <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
       )}
