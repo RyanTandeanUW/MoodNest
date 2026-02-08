@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import re
 import base64
 import threading
 from dotenv import load_dotenv
@@ -99,30 +100,34 @@ def audio_stream_to_base64(audio_data):
         return None
 
 SYSTEM_PROMPT = (
-    "You are MoodNest, an AI assistant that controls smart home lighting based on the user's mood.\n\n"
-    "CONVERSATION FLOW:\n"
-    "1. Ask follow-up questions to understand how the user is feeling\n"
-    "2. When you're confident about their mood, ASK them: 'Would you like me to change your home lighting to match this [emotion] feeling?'\n"
-    "   - Use the EXACT mood word in your question (happy, sad, angry, or neutral)\n"
-    "   - Make sure your description matches the mood you're detecting\n"
-    "3. Wait for their yes/no response\n"
-    "4. Only apply the mood change if they say yes\n\n"
-    "MOOD DEFINITIONS (BE CONSISTENT!):\n"
-    "- happy: Joyful, excited, cheerful, energetic, positive, upbeat, great, good\n"
-    "- sad: Down, melancholic, tired, low energy, disappointed, upset, blue\n"
-    "- angry: Frustrated, irritated, stressed, annoyed, mad, tense\n"
-    "- neutral: Calm, balanced, content, relaxed, at ease, okay, fine\n\n"
-    "EXAMPLE GOOD RESPONSE:\n"
-    "\"It sounds like you're feeling really cheerful and energetic today! Would you like me to change your home lighting to match this happy feeling?\"\n"
-    "JSON: {\"vibe\": \"happy\", \"confirm_request\": true}\n\n"
-    "RESPONSE FORMAT:\n"
-    "When asking for confirmation:\n"
-    "JSON: {\"vibe\": \"[mood]\", \"confirm_request\": true}\n"
-    "CRITICAL: The 'vibe' MUST match the emotion you described in your text!\n\n"
-    "When user responds yes/no:\n"
-    "JSON: {\"vibe\": \"[same_mood]\", \"confirmed\": true}  (if yes)\n"
-    "JSON: {\"confirmed\": false}  (if no)\n\n"
-    "Always be conversational, empathetic, and CONSISTENT with mood detection!"
+    "You are MoodNest, a friendly AI that adjusts room lighting and music.\\n"
+    "Your job: Chat with the user and suggest mood changes.\\n\\n"
+    "4 MOODS: happy, sad, angry, neutral\\n\\n"
+    "CONVERSATION FLOW:\\n"
+    "1. Ask ONE casual question to understand their mood\\n"
+    "2. After their answer, ASK PERMISSION to change the room\\n"
+    "3. If they say yes → confirm the change\\n"
+    "4. If they say no → acknowledge and don't change\\n\\n"
+    "JSON FORMATS:\\n"
+    "To ask permission: JSON: {\\\"vibe\\\": \\\"happy\\\", \\\"confirm_request\\\": true}\\n"
+    "User says yes: JSON: {\\\"confirmed\\\": true}\\n"
+    "User says no: JSON: {\\\"confirmed\\\": false}\\n\\n"
+    "EXAMPLES:\\n"
+    "User: 'Hey'\\n"
+    "You: Hey! How's it going?\\n\\n"
+    "User: 'Pretty good actually'\\n"
+    "You: Want me to set a happy vibe? JSON: {\\\"vibe\\\": \\\"happy\\\", \\\"confirm_request\\\": true}\\n\\n"
+    "User: 'Yes'\\n"
+    "You: Done! Enjoy! JSON: {\\\"confirmed\\\": true}\\n\\n"
+    "User: 'Feeling down'\\n"
+    "You: Should I set a calming mood? JSON: {\\\"vibe\\\": \\\"sad\\\", \\\"confirm_request\\\": true}\\n\\n"
+    "User: 'No thanks'\\n"
+    "You: No problem! JSON: {\\\"confirmed\\\": false}\\n\\n"
+    "RULES:\\n"
+    "- ALWAYS ask permission before changing mood\\n"
+    "- Keep responses 5-7 words max\\n"
+    "- Match vibe to their emotion\\n"
+    "- Use EXACTLY the JSON formats shown"
 )
 
 # Use Gemini 2.5 Flash-Lite for higher quota
@@ -132,111 +137,90 @@ chat_session = model.start_chat(history=[])
 # --- 2. CORE LOGIC ---
 
 def process_interaction(input_text):
-    """Same brain logic as before."""
+    """Process user input through Gemini conversation."""
     global chat_session
     
-    # 1. Add the user's message to the history for polling
+    print(f"\\n{'='*60}")
+    print(f"📥 USER: {input_text}")
+    
+    # Add to transcript
     with state_lock:
         state.transcript.append({"role": "user", "content": input_text})
     
-    # 2. Call Gemini (Flash-Lite for high quota)
+    # Get Gemini response
     response = chat_session.send_message(input_text)
     full_reply = response.text
     
-    print(f"🤖 Full Gemini response: {full_reply}")
+    print(f"🤖 GEMINI: {full_reply}")
     
-    # 3. Strip the JSON block so the user only hears the spoken part
-    # Remove everything after "JSON:" or any JSON-like content
-    clean_text = full_reply
-    
-    # Split on JSON: marker first
-    if "JSON:" in clean_text:
-        clean_text = clean_text.split("JSON:")[0]
-    
-    # Also remove any standalone JSON blocks that might appear
-    import re
-    clean_text = re.sub(r'\{[^}]*"vibe"[^}]*\}', '', clean_text)
-    clean_text = re.sub(r'\{[^}]*"confirmed"[^}]*\}', '', clean_text)
-    clean_text = re.sub(r'\{[^}]*"confirm_request"[^}]*\}', '', clean_text)
-    
-    # Remove any markdown code blocks
-    clean_text = re.sub(r'```json.*?```', '', clean_text, flags=re.DOTALL)
-    clean_text = re.sub(r'```.*?```', '', clean_text, flags=re.DOTALL)
-    
-    # Clean up extra whitespace
-    clean_text = ' '.join(clean_text.split()).strip()
-    
-    print(f"💬 Clean text for audio: {clean_text}")
-
-    # 4. Parse the JSON to handle confirmation flow
+    # Parse JSON if present
     new_vibe = None
     confirm_request = False
     confirmed = None
     
     try:
-        if "JSON:" in full_reply:
-            json_str = full_reply.split("JSON:")[1].strip()
-            # Clean up any markdown formatting
+        # Look for "JSON:" marker (case insensitive)
+        if "JSON:" in full_reply or "json:" in full_reply.lower():
+            json_str = re.split(r'json:', full_reply, flags=re.IGNORECASE)[1].strip()
             json_str = json_str.replace("```json", "").replace("```", "").strip()
-            data = json.loads(json_str)
-            
-            new_vibe = data.get("vibe")
-            confirm_request = data.get("confirm_request", False)
-            confirmed = data.get("confirmed")
-            
+            json_match = re.search(r'\{[^}]*\}', json_str)
+            if json_match:
+                data = json.loads(json_match.group(0))
+                new_vibe = data.get("vibe")
+                confirm_request = data.get("confirm_request", False)
+                confirmed = data.get("confirmed")
+                print(f"📋 JSON: vibe={new_vibe}, confirm_request={confirm_request}, confirmed={confirmed}")
+        
+        # Fallback: Look for any JSON with relevant keys
+        if not new_vibe and not confirmed:
+            json_match = re.search(r'\{[^}]*("vibe"|"confirm"|"confirmed")[^}]*\}', full_reply)
+            if json_match:
+                data = json.loads(json_match.group(0))
+                new_vibe = data.get("vibe")
+                confirm_request = data.get("confirm_request", False)
+                confirmed = data.get("confirmed")
+                print(f"📋 JSON (fallback): vibe={new_vibe}, confirm_request={confirm_request}, confirmed={confirmed}")
     except Exception as e:
-        print(f"⚠️ JSON parsing failed: {e}")
-        # Fallback: try to extract vibe from text
-        import re
-        vibe_match = re.search(r'vibe[:\s]+["\']?(happy|sad|angry|neutral)["\']?', full_reply, re.IGNORECASE)
-        if vibe_match:
-            new_vibe = vibe_match.group(1).lower()
-            print(f"💡 Extracted vibe from text: {new_vibe}")
-    
-    # Validate mood matches what was said
-    if new_vibe and confirm_request:
-        mood_keywords = {
-            "happy": ["happy", "joy", "great", "good", "excited", "energetic", "cheerful", "positive"],
-            "sad": ["sad", "down", "tired", "low", "disappointed", "upset", "melancholic"],
-            "angry": ["angry", "frustrated", "stressed", "irritated", "annoyed", "mad"],
-            "neutral": ["neutral", "calm", "balanced", "content", "relaxed", "okay", "fine"]
-        }
-        
-        text_lower = clean_text.lower()
-        detected_keywords = mood_keywords.get(new_vibe, [])
-        has_matching_keyword = any(keyword in text_lower for keyword in detected_keywords)
-        
-        if not has_matching_keyword:
-            print(f"⚠️ WARNING: Detected mood '{new_vibe}' doesn't match conversational text!")
-            print(f"   Text: {clean_text[:100]}...")
+        print(f"⚠️ JSON parsing: {e}")
     
     # Handle the confirmation flow
     with state_lock:
         if confirm_request and new_vibe and new_vibe in VIBE_PRESETS:
-            # Gemini is asking user for permission
+            # Gemini is asking for permission
             state.pending_vibe = new_vibe
             state.awaiting_confirmation = True
-            print(f"❓ Asking user to confirm mood change to: {new_vibe}")
-            
+            print(f"❓ ASKING: Want to change to '{new_vibe}'?")
+        
         elif confirmed is True and state.pending_vibe:
             # User said yes - apply the pending mood
             old_vibe = state.current_vibe
             state.current_vibe = state.pending_vibe
-            print(f"✅ User confirmed! Mood changed: {old_vibe} → {state.current_vibe}")
+            print(f"✅ CONFIRMED: {old_vibe} → {state.current_vibe}")
             state.pending_vibe = None
             state.awaiting_confirmation = False
-            
+        
         elif confirmed is False:
-            # User said no - cancel the pending mood
-            print(f"❌ User declined mood change to {state.pending_vibe}")
+            # User said no - cancel
+            print(f"❌ DECLINED: Not changing from {state.current_vibe}")
             state.pending_vibe = None
             state.awaiting_confirmation = False
+        else:
+            print(f"💭 CHATTING: No state change")
+    
+    # Clean text for audio (remove JSON and markers)
+    clean_text = full_reply
+    if "JSON:" in clean_text or "json:" in clean_text.lower():
+        clean_text = re.split(r'json:', clean_text, flags=re.IGNORECASE)[0].strip()
+    # Also remove any standalone JSON objects
+    clean_text = re.sub(r'\{[^}]*("vibe"|"confirm")[^}]*\}', '', clean_text).strip()
+    print(f"💬 Response: {clean_text}")
+    print(f"{'='*60}\\n")
 
-    # 5. Add AI's text to history
+    # 6. Add AI's text to history
     with state_lock:
         state.transcript.append({"role": "assistant", "content": clean_text})
 
-    # 6. Generate ElevenLabs audio response and return as base64
+    # 7. Generate ElevenLabs audio response and return as base64
     audio_base64 = None
     if el_client and clean_text:
         try:
@@ -247,6 +231,8 @@ def process_interaction(input_text):
             )
             # Convert audio stream to base64 for frontend playback
             audio_base64 = audio_stream_to_base64(audio)
+        except ConnectionResetError:
+            print(f"⚠️ ElevenLabs connection reset - skipping audio")
         except Exception as e:
             print(f"⚠️ Could not generate audio: {e}")
         
@@ -273,17 +259,31 @@ async def analyze_voice_conversation(audio: UploadFile = File(...)):
         audio_file = genai.upload_file(path=temp_path)
         transcribe_model = genai.GenerativeModel('gemini-2.5-flash-lite')
         transcribe_response = transcribe_model.generate_content([
-            "Transcribe this audio exactly. Return only the spoken words, no other text.",
+            "Listen to this audio and transcribe EXACTLY what is said. "
+            "Return ONLY the spoken words with no additional commentary, explanations, or interpretations. "
+            "If you cannot clearly hear the words, return: [unclear audio]",
             audio_file
         ])
         
         user_text = transcribe_response.text.strip()
-        print(f"💬 User said: {user_text}")
+        
+        # Check if transcription failed
+        if "[unclear audio]" in user_text.lower() or len(user_text) < 1:
+            print(f"⚠️ Transcription unclear: {user_text}")
+            return {
+                "success": False,
+                "error": "Could not understand audio clearly. Please speak clearly and try again."
+            }
+        
+        print(f"💬 User said: '{user_text}'")
         
         # Clean up temp file
         import os as os_module
         if os_module.path.exists(temp_path):
-            os_module.remove(temp_path)
+            try:
+                os_module.remove(temp_path)
+            except:
+                pass  # Will be overwritten next time
         
         # Process through conversation (with ElevenLabs response)
         ai_response, audio_base64 = process_interaction(user_text)
@@ -314,7 +314,10 @@ async def analyze_voice_conversation(audio: UploadFile = File(...)):
         # Clean up temp file on error
         import os as os_module
         if os_module.path.exists("temp_audio_conv.wav"):
-            os_module.remove("temp_audio_conv.wav")
+            try:
+                os_module.remove("temp_audio_conv.wav")
+            except:
+                pass  # Will be overwritten next time
         
         return {
             "success": False,
@@ -369,7 +372,10 @@ Set "valid":false if audio lacks clear human speech."""
         # Clean up temp file
         import os as os_module
         if os_module.path.exists(temp_path):
-            os_module.remove(temp_path)
+            try:
+                os_module.remove(temp_path)
+            except:
+                pass  # Will be overwritten next time
         
         # Parse Gemini response
         try:
@@ -430,7 +436,10 @@ Set "valid":false if audio lacks clear human speech."""
         # Clean up temp file on error
         import os as os_module
         if os_module.path.exists("temp_audio.wav"):
-            os_module.remove("temp_audio.wav")
+            try:
+                os_module.remove("temp_audio.wav")
+            except:
+                pass  # Will be overwritten next time
         
         return {
             "success": False,
@@ -517,6 +526,8 @@ async def api_reset():
     with state_lock:
         state.transcript = []
         state.current_vibe = "neutral"
+        state.pending_vibe = None
+        state.awaiting_confirmation = False
     chat_session = model.start_chat(history=[])
     return {"message": "System Reset"}
 

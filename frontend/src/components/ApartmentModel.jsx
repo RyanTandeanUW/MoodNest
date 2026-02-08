@@ -121,12 +121,11 @@ export default function ApartmentModel({ mood = "neutral", ...props }) {
           pointLight.position.copy(child.position);
           pointLight.castShadow = true;
 
-          // Shadow quality settings
-          // Shadow quality settings
+          // Shadow quality settings - adjusted to prevent shadow acne
           pointLight.shadow.mapSize.width = 1024;
           pointLight.shadow.mapSize.height = 1024;
-          pointLight.shadow.bias = -0.005;
-          pointLight.shadow.normalBias = 0.05;
+          pointLight.shadow.bias = 0.001; // Positive value to prevent shadow acne
+          pointLight.shadow.normalBias = 0.1; // Increased to reduce self-shadowing artifacts
 
           // Add the light to the scene and remember it
           child.parent.add(pointLight);

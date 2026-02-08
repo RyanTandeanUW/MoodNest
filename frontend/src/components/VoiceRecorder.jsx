@@ -193,14 +193,20 @@ export default function VoiceRecorder({ onRecordingComplete }) {
         setShowResult(true);
 
         // If mood was successfully detected AND confirmed, notify parent component
-        // This triggers the apartment lighting to change
-        // Don't change lights if we're still waiting for user confirmation
+        // This triggers the apartment lighting AND music to change
+        // Don't change if we're still waiting for user confirmation
         if (
           result.success &&
           !result.awaiting_confirmation &&
           onRecordingComplete
         ) {
+          console.log(
+            "✅ Mood confirmed, updating lights and music:",
+            result.detected_mood,
+          );
           onRecordingComplete(result);
+        } else if (result.awaiting_confirmation) {
+          console.log("⏳ Waiting for user confirmation before changing mood");
         }
       } else {
         // Server error response
